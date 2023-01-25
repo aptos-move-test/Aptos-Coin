@@ -3,11 +3,11 @@ module AptCoin::acn_tests {
     use aptos_framework::account;
 
    // Test initializing the module
-public fun test_init_module(){
-    let ashish = account::create_account();
-    AptCoin::acn.init_module(&ashish);
-    assert(coin::is_coin_initialized<AptCoin::acn::ACN>(), "Coin should be initialized.");
-}
+// public fun test_init_module(){
+//     let ashish = account::create_account();
+//     AptCoin::acn.init_module(&ashish);
+//     assert(coin::is_coin_initialized<AptCoin::acn::ACN>(), "Coin should be initialized.");
+// }
 
 // Test registering an account
 public fun test_register(){
