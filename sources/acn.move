@@ -116,58 +116,5 @@ module AptCoin::acn{
         emit_event(unfreeze_address, utf8(b"unfreezed"));
     }
 
-    public entry fun transfer<CoinType>(
-        from: &signer,
-        to: address,
-        amount: u64,
-    ) acquires CoinStore {
-//withdraw function requires the &signer permission
-//It is used to withdraw a certain amount of assets from your account into a coin
-        let coin = withdraw<CoinType>(from, amount);
-//deposit function can deposit a coin into any registered account of the coin
-        deposit(to, coin);
-// the transferred coins will be automatically merged with the coins stored in the CoinStore struct of the target address.
-    }
-
-//extract function is used to split coins
-//It receives a Coin struct
-// extracts a part of the asset in it to generate a new Coin struct
-    public fun extract<CoinType>(coin: &mut Coin<CoinType>, amount: u64): Coin<CoinType> {
-        assert!(coin.value >= amount, error::invalid_argument(EINSUFFICIENT_BALANCE));
-        coin.value = coin.value - amount;
-        Coin { value: amount }
-    }
-
-//extract_all function is used to extract the entire value of the original Coin struct
-//and it deposit it into a new Coin struct
-    public fun extract_all<CoinType>(coin: &mut Coin<CoinType>): Coin<CoinType> {
-        let total_value = coin.value;
-        coin.value = 0;
-        Coin { value: total_value }
-    }
-
-//As a result, the value of the original Coin struct will become zero (aka zero_coin).
-//zero_coin struct can be destroyed by invoking the destroy_zero function.
-    public fun destroy_zero<CoinType>(zero_coin: Coin<CoinType>) {
-        let Coin { value } = zero_coin;
-        assert!(value == 0, error::invalid_argument(EDESTRUCTION_OF_NONZERO_TOKEN))
-    }
-
-//merge function is used to merge coins
-//It can merge the value of two Coin structs
-//eg. source_coin and dst_coin, into the dst_coin struct and destroy the source_coin struct.
-    public fun merge<CoinType>(dst_coin: &mut Coin<CoinType>, source_coin: Coin<CoinType>) {
-        spec {
-            assume dst_coin.value + source_coin.value <= MAX_U64;
-        };
-        dst_coin.value = dst_coin.value + source_coin.value;
-        let Coin { value: _ } = source_coin;
-    }
-
-//zero function is used to generate a zero_coin struct.
-    public fun zero<CoinType>(): Coin<CoinType> {
-        Coin<CoinType> {
-            value: 0
-        }
-    }
+    
 }
