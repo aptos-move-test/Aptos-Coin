@@ -28,6 +28,11 @@ module AptCoin::acn{
         move_to(account, CapsStore{mint_cap: mint_cap, freeze_cap: freeze_cap, burn_cap: burn_cap});
     }
 
+//It is used to help users register coin usage rights and event recorders.
+//aptos_framework::coin module stipulates that the user has to first explicitly register the right to use the coin
+// through the aptos_framework::coin::register function.
+//The registration puts a CoinStore struct into account. 
+//CoinStore struct contains a Coin struct to record balance.
     public entry fun register(account: &signer){
         let address_ = signer::addres_of(account);
         if(!coin::is_account_registered<ACN>(address_)){
@@ -85,7 +90,7 @@ module AptCoin::acn{
         emit_event(signer::address_of(account), utf8(b"burned ACN"));
     }
 
-// Capability required to freeze a coin store.
+//freeze_self function for users to freeze their coin accounts
     public entry fun freeze_self(account: &signer) acquires CapStore, ACNEventStore{
         let owner_address = type_info::account_address(&type_info::type_of<ACN>());
         let freeze_cap = &borrow_global<CapStore>(owner_address).freeze_cap;
@@ -94,6 +99,8 @@ module AptCoin::acn{
         emit_event(freeze_address, utf8(b"freezed self"));
     }
 
+//emergency_freeze function for emergency freezing
+//It can only be used by the admin.
      public entry fun emergency_freeze(cap_owner: &signer, freeze_address: address) acquires CapStore, ACNEventStore{
         let owner_address = signer::address_of(cap_owner);
         let freeze_cap = &borrow_global<CapStore>(owner_address).freeze_cap;
@@ -101,10 +108,66 @@ module AptCoin::acn{
         emit_event(freeze_address, utf8(b"emergency freezed"));
     }
 
+//unfreeze function also requires the admin to unfreeze the user accounts.
     public entry fun unfreeze(cap_owner: &signer, unfreeze_address: address) acquires CapStore, ACNEventStore{
         let owner_address = signer::address_of(cap_owner);
         let freeze_cap = &borrow_global<CapStore>(owner_address).freeze_cap;
         coin::unfreeze_coin_store<ACN>(unfreeze_address, freeze_cap);
         emit_event(unfreeze_address, utf8(b"unfreezed"));
+    }
+
+    public entry fun transfer<CoinType>(
+        from: &signer,
+        to: address,
+        amount: u64,
+    ) acquires CoinStore {
+//withdraw function requires the &signer permission
+//It is used to withdraw a certain amount of assets from your account into a coin
+        let coin = withdraw<CoinType>(from, amount);
+//deposit function can deposit a coin into any registered account of the coin
+        deposit(to, coin);
+// the transferred coins will be automatically merged with the coins stored in the CoinStore struct of the target address.
+    }
+
+//extract function is used to split coins
+//It receives a Coin struct
+// extracts a part of the asset in it to generate a new Coin struct
+    public fun extract<CoinType>(coin: &mut Coin<CoinType>, amount: u64): Coin<CoinType> {
+        assert!(coin.value >= amount, error::invalid_argument(EINSUFFICIENT_BALANCE));
+        coin.value = coin.value - amount;
+        Coin { value: amount }
+    }
+
+//extract_all function is used to extract the entire value of the original Coin struct
+//and it deposit it into a new Coin struct
+    public fun extract_all<CoinType>(coin: &mut Coin<CoinType>): Coin<CoinType> {
+        let total_value = coin.value;
+        coin.value = 0;
+        Coin { value: total_value }
+    }
+
+//As a result, the value of the original Coin struct will become zero (aka zero_coin).
+//zero_coin struct can be destroyed by invoking the destroy_zero function.
+    public fun destroy_zero<CoinType>(zero_coin: Coin<CoinType>) {
+        let Coin { value } = zero_coin;
+        assert!(value == 0, error::invalid_argument(EDESTRUCTION_OF_NONZERO_TOKEN))
+    }
+
+//merge function is used to merge coins
+//It can merge the value of two Coin structs
+//eg. source_coin and dst_coin, into the dst_coin struct and destroy the source_coin struct.
+    public fun merge<CoinType>(dst_coin: &mut Coin<CoinType>, source_coin: Coin<CoinType>) {
+        spec {
+            assume dst_coin.value + source_coin.value <= MAX_U64;
+        };
+        dst_coin.value = dst_coin.value + source_coin.value;
+        let Coin { value: _ } = source_coin;
+    }
+
+//zero function is used to generate a zero_coin struct.
+    public fun zero<CoinType>(): Coin<CoinType> {
+        Coin<CoinType> {
+            value: 0
+        }
     }
 }
