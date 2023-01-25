@@ -9,7 +9,7 @@ module AptCoin::acn{
     struct ACN {} // unique identifier of the coin.
 
 // used to store some capabilities obtained from the aptos_framework::coin module.
-    struct CapsStore has key{ 
+    struct CapStore has key{ 
         mint_cap: coin::MintCapability<ACN>,
         freeze_cap: coin::FreezeCapability<ACN>,
         burn_cap: coin::BurnCapability<ACN>
@@ -25,7 +25,7 @@ module AptCoin::acn{
 // it register the AptCoin::acn::ACN as a unique identifier for a new coin.
     fun init_module(account: &signer){
         let (burn_cap, freeze_cap, mint_cap) = coin::initialize<ACN>(account, utf8(b"ACN"), utf8(b"ACN"), 6, true);
-        move_to(account, CapsStore{mint_cap: mint_cap, freeze_cap: freeze_cap, burn_cap: burn_cap});
+        move_to(account, CapStore{mint_cap: mint_cap, freeze_cap: freeze_cap, burn_cap: burn_cap});
     }
 
 //It is used to help users register coin usage rights and event recorders.
@@ -34,7 +34,7 @@ module AptCoin::acn{
 //The registration puts a CoinStore struct into account. 
 //CoinStore struct contains a Coin struct to record balance.
     public entry fun register(account: &signer){
-        let address_ = signer::addres_of(account);
+        let address_ = signer::address_of(account);
         if(!coin::is_account_registered<ACN>(address_)){
             coin::register<ACN>(account);
         };
